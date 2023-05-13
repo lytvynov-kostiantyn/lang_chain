@@ -1,6 +1,7 @@
 myenv
 mail_tool
 .idea
+basket
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
