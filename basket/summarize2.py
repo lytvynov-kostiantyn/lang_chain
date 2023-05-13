@@ -21,16 +21,12 @@ RESPONSE=response
 CONCISE SUMMARY:"""
 PROMPT = PromptTemplate(template=prompt_template, input_variables=["text"])
 
-SENDER = "SENDER"
 PRIORITY = "PRIORITY"
 SUMMARY = "SUMMARY"
 RESPONSE = "RESPONSE"
 
 
 def summarize(subject, text, open_api_key):
-    """Summarize given subject and text, returns dictionary with the
-        PRIORITY, SUMMARY, and RESPONSE keys
-    """
     full_text = f"Subject: {subject}\n\n{text}"
     docs = [Document(page_content=full_text)]
     llm = OpenAI(temperature=0, openai_api_key=open_api_key)
@@ -49,54 +45,21 @@ def summarize(subject, text, open_api_key):
 
 
 summarize_res_by_message_id = {}
-postponed_messages_ids = []  # low priority message IDs
 
 
-openai_api_key = os.getenv("OPENAI_API_KEY")
-
-
-def process_message(gmail_message_id, sender, subject, text):
-    """Entry point, Gmail hook calls it"""
-
+def process_message(gmail_message_id, subject, text):
+    openai_api_key = os.getenv("OPENAI_API_KEY")
     summarize_res = summarize(subject, text, openai_api_key)
-    summarize_res[SENDER] = sender
 
     summarize_res_by_message_id[gmail_message_id] = summarize_res
 
-    priority = int(summarize_res[PRIORITY])
-    summary = summarize_res[SUMMARY]
-    response = summarize_res[RESPONSE]
-
-    if priority < 3:
-        action_list = [
-            {"type": IGNORE_MAIL},
-            {"type": OPEN_MAIL, "id": gmail_message_id},
-            {"type": REPLY_MAIL, "id": gmail_message_id, "response": response}
-        ]
-
-        text = f"Ви отримали важливий email від {sender}:\n{summary}"
-        format_message("", text, action_list)
-    else:
-        postponed_messages_ids.append(postponed_messages_ids)
+    respond_to_messenger(gmail_message_id, summarize_res[PRIORITY], summarize_res[SUMMARY], summarize_res[RESPONSE])
 
 
-def respond_rest():
-    digest = ""
-    for gmail_message_id in postponed_messages_ids:
-        summarize_res = summarize_res_by_message_id[gmail_message_id]
-        sender = summarize_res[SENDER]
-        summary = summarize_res[SUMMARY]
-
-        digest += f"Від: {sender}: {summary}\n"
-        summarize_res_by_message_id.pop(gmail_message_id)
-
-    format_message("", digest, [])
-    postponed_messages_ids.clear()
-
-
-def format_message(chat_id, text, action_list):
-    # TODO messenger callback
-    pass
+def respond_to_messenger(gmail_message_id, priority, summary, response):
+    print(f'in respond_to_messenger')
+    # TODO: discuss with messenger service
+    print(gmail_message_id, priority, summary, response)
 
 
 IGNORE_MAIL = 0
@@ -105,41 +68,37 @@ REPLY_MAIL = 2
 
 
 def react(gmail_message_id, reaction):
-    """
-    The function receives a response from the messenger and calls the corresponding function
-    """
     if reaction == IGNORE_MAIL:
-        pass
+        return
 
-    elif reaction == OPEN_MAIL:
-        # open gmail message with gmail_message_id using GMail Toolkit
+    summarize_res = summarize_res_by_message_id[gmail_message_id]
+
+    if reaction == OPEN_MAIL:
         open_gmail_message(gmail_message_id)
+        return
 
-    elif reaction == REPLY_MAIL:
-        # generate draft of the reply to gmail message with gmail_message_id using GMail Toolkit
-        summarize_res = summarize_res_by_message_id[gmail_message_id]
+    if reaction == REPLY_MAIL:
         reply_gmail_message(gmail_message_id, summarize_res[RESPONSE])
+        return
 
-    summarize_res_by_message_id.pop(gmail_message_id)
-
-
+# TODO: Delete
 def open_gmail_message(gmail_message_id):
-    # TODO gmail callback
     pass
 
 
 def reply_gmail_message(gmail_message_id, response):
-    # TODO gmail callback
     pass
 
 
 def main():
+    openai_api_key = os.getenv("OPENAI_API_KEY")
+
     subject = "Urgent: Critical Issues Identified in Current Project - Immediate Requirement Changes & Meeting Request ASAP"
     text = """
     Dear Mr. Smith,
 
 I hope this email finds you well. I am writing to urgently address some critical concerns that have emerged during the course of our current project.
- 
+
 It has come to our attention that certain aspects of the project plan and requirements need immediate attention and modification.
 
 Upon thorough analysis and feedback from stakeholders, we have identified several key areas where the current project falls short of meeting the desired objectives. 
@@ -157,7 +116,6 @@ I kindly request your immediate attention and collaboration in addressing the fo
 3. Prioritize the implementation of required changes to mitigate risks and improve project outcomes.
 
 4. Communicate the need for immediate requirement changes to all relevant stakeholders, emphasizing the importance and urgency of their involvement.
-
 I urge you to treat this matter with the utmost urgency. We need to act swiftly to prevent any further setbacks and ensure the project's timely delivery within the defined parameters.
 
 I am counting on your expertise and support in leading the effort to address these issues promptly. Should you require any additional resources or assistance, 
@@ -179,5 +137,5 @@ John Watson.
     print(res[RESPONSE])
 
 
-if __name__ == "__main__":
+if __name__ == "main":
     main()

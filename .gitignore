@@ -3,8 +3,6 @@ mail_tool
 .idea
 # Byte-compiled / optimized / DLL files
 __pycache__/
-cohere_tools.py
-response_to_user.py
 *.py[cod]
 *$py.class
 
