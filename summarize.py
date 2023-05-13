@@ -58,15 +58,18 @@ openai_api_key = os.getenv("OPENAI_API_KEY")
 def process_message(gmail_message_id, sender, subject, text):
     """Entry point, Gmail hook calls it"""
 
+    # Getting priority, summery and response for email
     summarize_res = summarize(subject, text, openai_api_key)
     summarize_res[SENDER] = sender
 
+    # Saving results from email handler
     summarize_res_by_message_id[gmail_message_id] = summarize_res
 
     priority = int(summarize_res[PRIORITY])
     summary = summarize_res[SUMMARY]
     response = summarize_res[RESPONSE]
 
+    # Sending notification to messenger for email with height priority (1 or 2)
     if priority < 3:
         action_list = [
             {"type": IGNORE_MAIL},
@@ -75,12 +78,16 @@ def process_message(gmail_message_id, sender, subject, text):
         ]
 
         text = f"Ви отримали важливий email від {sender}:\n{summary}"
+        # Sending to messenger
         format_message("", text, action_list)
     else:
         postponed_messages_ids.append(postponed_messages_ids)
 
 
 def respond_rest():
+    """ IN PROGRESS...
+    Handler for low priority emails
+    """
     digest = ""
     for gmail_message_id in postponed_messages_ids:
         summarize_res = summarize_res_by_message_id[gmail_message_id]
@@ -94,6 +101,7 @@ def respond_rest():
     postponed_messages_ids.clear()
 
 
+# Function sends notification to messenger
 def format_message(chat_id, text, action_list):
     # TODO messenger callback
     pass
@@ -134,6 +142,7 @@ def reply_gmail_message(gmail_message_id, response):
 
 
 def main():
+    """Function for module testing"""
     subject = "Urgent: Critical Issues Identified in Current Project - Immediate Requirement Changes & Meeting Request ASAP"
     text = """
     Dear Mr. Smith,
